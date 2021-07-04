@@ -28,11 +28,6 @@ app.post('/api/login', (req, res) => {
 
     const errorMessage = "Log In Error";
 
-    // bcrypt.hash(password, saltRounds, function(err, hash) {
-    //     console.log(hash)
-    // });
-
-
     db.query('SELECT password FROM users WHERE username = ?;', username, (err, result) => {
         if (err) throw err;
 
@@ -43,7 +38,7 @@ app.post('/api/login', (req, res) => {
 
         const hash = result[0].password;
 
-        bcrypt.compare(password, hash, function(error, result) {
+        bcrypt.compare(password, hash, (error, result) => {
             if (error) throw error;
             
             if (result) {
@@ -58,9 +53,28 @@ app.post('/api/login', (req, res) => {
     
         });
     });
-})
+});
 
-app.get('/users', (req, res) => {
+app.post('/api/signup', (req, res) => {
+
+    const username = req.body.username;
+    const password = req.body.password;
+
+    
+    bcrypt.hash(password, saltRounds, (err, hash) => {
+        db.query('INSERT INTO users (username, password) VALUES (?, ?)',
+        [username, hash],
+        (err, result) => {
+            if (err) {
+                res.sendStatus(400);
+            } else {
+                res.sendStatus(200);
+            }
+        })
+    });
+});
+
+app.get('/api/users', (req, res) => {
     db.query("SELECT * FROM users", (err, result) => {
         if (err) {
             res.status(400).json(err);
