@@ -75,7 +75,7 @@ app.post('/api/signup', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
-    db.query("SELECT * FROM users", (err, result) => {
+    db.query("SELECT username FROM users", (err, result) => {
         if (err) {
             res.status(400).json(err);
         } else {
