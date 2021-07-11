@@ -32,7 +32,7 @@ app.post('/api/login', (req, res) => {
         if (err) throw err;
 
         if (! result[0]) {
-            res.status(404).send(errorMessage);
+            res.status(401).send(errorMessage);
             return;
         }
 
@@ -48,7 +48,7 @@ app.post('/api/login', (req, res) => {
                 });
             } else {
                 // login fail
-                res.status(404).send(errorMessage);
+                res.status(401).send(errorMessage);
             }
     
         });
