@@ -29,7 +29,8 @@ app.post('/api/login', (req, res) => {
     const errorMessage = "Log In Error";
 
     db.query('SELECT password FROM users WHERE username = ?;', username, (err, result) => {
-        if (err) throw err;
+        if (err)
+            res.sendStatus(500);
 
         if (! result[0]) {
             res.status(401).send(errorMessage);
@@ -66,23 +67,51 @@ app.post('/api/signup', (req, res) => {
         [username, hash],
         (err, result) => {
             if (err) {
-                res.sendStatus(400);
+                res.sendStatus(500);
             } else {
                 res.sendStatus(200);
             }
-        })
+        });
     });
 });
 
 app.get('/api/users', (req, res) => {
     db.query("SELECT username FROM users", (err, result) => {
         if (err) {
-            res.status(400).json(err);
+            res.status(500);
         } else {
             res.status(200).json(result);
         }
     });
 })
+
+app.get('/api/threads', (req, res) => {
+    db.query('SELECT thread.id AS post_id, users.id AS op_id, username, content FROM users INNER JOIN thread ON users.id=thread.user_account_id',
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    })
+});
+
+app.post('/api/threads', (req, res) => {
+
+    const content = req.body.content;
+    const op_id = req.body.op_id;
+
+    db.query('INSERT INTO thread (content, user_account_id) VALUES (?, ?)',
+    [content, op_id],
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        } 
+    });
+});
+
 
 app.listen(3001, () => {
     console.log("Server listening on port 3001");
