@@ -86,7 +86,10 @@ app.get('/api/users', (req, res) => {
 })
 
 app.get('/api/threads', (req, res) => {
-    db.query('SELECT threads.id, users.id AS user_id, username, subject FROM users INNER JOIN threads ON users.id=threads.user_id',
+    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit, username, subject
+                FROM users
+                    INNER JOIN threads ON users.id=threads.user_id
+                    INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id`,
     (err, result) => {
         if (err) {
             res.sendStatus(500);
@@ -106,6 +109,50 @@ app.post('/api/threads', (req, res) => {
     [subject, user_id, sub_id],
     (err, result) => {
         if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+app.post('/api/subkerrdits', (req, res) => {
+    const name = req.body.name;
+
+    db.query('INSERT INTO subkerrdits (name) VALUES (?)', name,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+app.get('/api/subkerrdits', (req, res) => {
+    db.query('SELECT * FROM subkerrdits',
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
+// inserting parent replies to posts
+// TODO add functionality for replies
+app.post('/api/posts', (req, res) => {
+
+    const thread_id = req.body.thread_id;
+    const message = req.body.message;
+    const user_id = req.body.user_id;
+
+    db.query('INSERT INTO posts (thread_id, message, user_id) VALUES (?, ?, ?)',
+    [thread_id, message, user_id],
+    (err, result) => {
+        if (err) {
+            console.log(err)
             res.sendStatus(500);
         } else {
             res.sendStatus(200);
