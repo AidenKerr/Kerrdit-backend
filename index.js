@@ -86,7 +86,7 @@ app.get('/api/users', (req, res) => {
 })
 
 app.get('/api/threads', (req, res) => {
-    db.query('SELECT thread.id AS post_id, users.id AS op_id, username, content FROM users INNER JOIN thread ON users.id=thread.user_account_id',
+    db.query('SELECT threads.id, users.id AS user_id, username, subject FROM users INNER JOIN threads ON users.id=threads.user_id',
     (err, result) => {
         if (err) {
             res.sendStatus(500);
@@ -98,17 +98,18 @@ app.get('/api/threads', (req, res) => {
 
 app.post('/api/threads', (req, res) => {
 
-    const content = req.body.content;
-    const op_id = req.body.op_id;
+    const subject = req.body.subject;
+    const user_id = req.body.user_id; // the thread poster
+    const sub_id = req.body.sub_id; // the subkerrdit in which it is posted
 
-    db.query('INSERT INTO thread (content, user_account_id) VALUES (?, ?)',
-    [content, op_id],
+    db.query('INSERT INTO threads (subject, user_id, sub_id) VALUES (?, ?, ?)',
+    [subject, user_id, sub_id],
     (err, result) => {
         if (err) {
             res.sendStatus(500);
         } else {
             res.sendStatus(200);
-        } 
+        }
     });
 });
 
