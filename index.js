@@ -152,7 +152,20 @@ app.post('/api/posts', (req, res) => {
     [thread_id, message, user_id],
     (err, result) => {
         if (err) {
-            console.log(err)
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+app.post('/api/posts/upvote', (req, res) => {
+    const post_id = req.body.post_id;
+    
+    db.query('UPDATE posts SET points = points + 1 WHERE id = ?',
+    [post_id],
+    (err, result) => {
+        if (err) {
             res.sendStatus(500);
         } else {
             res.sendStatus(200);
@@ -161,6 +174,43 @@ app.post('/api/posts', (req, res) => {
 });
 
 
+// This endpoint returns the sum of the points for each post a user has made.
+// While the database queries the posts table, the data is concerning the user, hence the URL
+app.get('/api/users/karma', (req, res) => {
+
+    const user_id = req.body.user_id;
+
+    db.query('SELECT SUM(points) AS karma FROM posts WHERE user_id=?', user_id,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
+
+// get all posts from a given user
+app.get('/api/:username/threads', (req, res) => {
+
+    const username = req.params.username;
+
+    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit, username, subject
+                FROM users
+                    INNER JOIN threads ON users.id=threads.user_id
+                    INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
+                WHERE username=?`, username,
+    (err, result) => {
+        if (err) {
+            console.log(err)
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
 app.listen(3001, () => {
     console.log("Server listening on port 3001");
-})
+});
