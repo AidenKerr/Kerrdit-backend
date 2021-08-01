@@ -196,12 +196,31 @@ app.get('/api/:username/threads', (req, res) => {
 
     const username = req.params.username;
 
-    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit, username, subject, points
+    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
+                    username, subject, points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
                 FROM users
                     INNER JOIN threads ON users.id=threads.user_id
                     INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
                     INNER JOIN posts ON threads.id=posts.thread_id
-                WHERE username=? AND posts.parent_id=0`, username,
+                WHERE username=? AND posts.parent_id=0
+                ORDER BY posted_on`, username,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
+app.get('/api/:username/userinfo', (req, res) => {
+
+    const username = req.params.username;
+
+    db.query(`SELECT UNIX_TIMESTAMP(account_age) * 1000 as unix_time_ms, SUM(points) as karma FROM users
+                INNER JOIN posts ON users.id=posts.user_id
+                WHERE username=? `,
+    username,
     (err, result) => {
         if (err) {
             console.log(err)
