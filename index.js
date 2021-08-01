@@ -196,11 +196,12 @@ app.get('/api/:username/threads', (req, res) => {
 
     const username = req.params.username;
 
-    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit, username, subject
+    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit, username, subject, points
                 FROM users
                     INNER JOIN threads ON users.id=threads.user_id
                     INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
-                WHERE username=?`, username,
+                    INNER JOIN posts ON threads.id=posts.thread_id
+                WHERE username=? AND posts.parent_id=0`, username,
     (err, result) => {
         if (err) {
             console.log(err)
