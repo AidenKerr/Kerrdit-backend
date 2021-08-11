@@ -99,23 +99,6 @@ app.get('/api/threads', (req, res) => {
     })
 });
 
-app.post('/api/threads', (req, res) => {
-
-    const subject = req.body.subject;
-    const user_id = req.body.user_id; // the thread poster
-    const sub_id = req.body.sub_id; // the subkerrdit in which it is posted
-
-    db.query('INSERT INTO threads (subject, user_id, sub_id) VALUES (?, ?, ?)',
-    [subject, user_id, sub_id],
-    (err, result) => {
-        if (err) {
-            res.sendStatus(500);
-        } else {
-            res.sendStatus(200);
-        }
-    });
-});
-
 app.post('/api/subkerrdits', (req, res) => {
     const name = req.body.name;
 
@@ -190,9 +173,8 @@ app.get('/api/users/karma', (req, res) => {
     });
 });
 
-
 // get all posts from a given user
-app.get('/api/:username/threads', (req, res) => {
+app.get('/api/u/:username/threads', (req, res) => {
 
     const username = req.params.username;
 
@@ -213,7 +195,7 @@ app.get('/api/:username/threads', (req, res) => {
     });
 });
 
-app.get('/api/:username/userinfo', (req, res) => {
+app.get('/api/u/:username/userinfo', (req, res) => {
 
     const username = req.params.username;
 
@@ -229,6 +211,93 @@ app.get('/api/:username/userinfo', (req, res) => {
             res.status(200).json(result);
         }
     });
+});
+
+app.get('/api/r/:subkerrdit/threads', (req, res) => {
+
+    const subkerrdit = req.params.subkerrdit;
+
+    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
+                    username, subject, points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
+                FROM users
+                    INNER JOIN threads ON users.id=threads.user_id
+                    INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
+                    INNER JOIN posts ON threads.id=posts.thread_id
+                WHERE subkerrdits.name=? AND posts.parent_id=0
+                ORDER BY points DESC`, subkerrdit,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
+// this should return all data concerning a specific thread.
+app.get('/api/thread/:id', (req, res) => {
+
+    const id = req.params.id;
+
+    db.query(`SELECT subject, username, message
+                FROM threads
+                    INNER JOIN users ON users.id=threads.user_id
+                    INNER JOIN posts ON threads.id=posts.thread_id
+                WHERE threads.id=? AND parent_id=0`, id,
+    (err, result) => {
+        if (err) {
+            console.log(err)
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    })
+})
+
+// submit a new thread
+app.post('/api/threads', (req, res) => {
+
+    const subject = req.body.subject;
+    const username = req.body.username; // the thread poster
+    const sub_id = req.body.sub_id; // the subkerrdit in which it is posted
+    const message = req.body.message;
+
+    let user_id;
+
+    // TODO: improve user info storage so this next line isn't necessary
+    // (this will also clean up some API/DB requests)
+    // because this first query is just silly
+    db.query('SELECT id FROM users WHERE username=?', username,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            console.log(result[0].id)
+            user_id = result[0].id;
+
+            db.query('INSERT INTO threads (subject, user_id, sub_id) VALUES (?, ?, ?)',
+            [subject, user_id, sub_id],
+            (err, result) => {
+                if (err) {
+                    res.sendStatus(500);
+                } else {
+
+                    // create post for given thread
+
+                    db.query('INSERT INTO posts (message, user_id, thread_id) VALUES (?, ?, LAST_INSERT_ID())',
+                    [message, user_id],
+                    (err, result) => {
+                        if (err) {
+                            // TODO: clean up previously created thread
+                            res.sendStatus(500);
+                        } else {
+                            res.sendStatus(200);
+                        }
+                    })
+                }
+            });
+        }
+    })
 });
 
 app.listen(3001, () => {
