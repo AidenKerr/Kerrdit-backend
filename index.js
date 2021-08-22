@@ -28,7 +28,7 @@ app.post('/api/login', (req, res) => {
 
     const errorMessage = "Log In Error";
 
-    db.query('SELECT password FROM users WHERE username = ?;', username, (err, result) => {
+    db.query('SELECT password, id FROM users WHERE username = ?;', username, (err, result) => {
         if (err)
             res.sendStatus(500);
 
@@ -38,6 +38,7 @@ app.post('/api/login', (req, res) => {
         }
 
         const hash = result[0].password;
+        const id = result[0].id;
 
         bcrypt.compare(password, hash, (error, result) => {
             if (error) throw error;
@@ -45,7 +46,10 @@ app.post('/api/login', (req, res) => {
             if (result) {
                 // login success
                 res.status(200).json({
-                    result: username
+                    result: {
+                        username: username,
+                        id: id
+                    }
                 });
             } else {
                 // login fail
@@ -258,22 +262,18 @@ app.get('/api/thread/:id', (req, res) => {
 app.post('/api/threads', (req, res) => {
 
     const subject = req.body.subject;
-    const username = req.body.username; // the thread poster
-    const sub_id = req.body.sub_id; // the subkerrdit in which it is posted
+    const sub_name = req.body.sub_name; // the subkerrdit in which it will be posted
     const message = req.body.message;
+    let user_id = req.body.userID;
 
-    let user_id;
-
-    // TODO: improve user info storage so this next line isn't necessary
-    // (this will also clean up some API/DB requests)
-    // because this first query is just silly
-    db.query('SELECT id FROM users WHERE username=?', username,
+    db.query('SELECT id FROM subkerrdits WHERE name=?', sub_name,
     (err, result) => {
         if (err) {
+            console.log(err);
             res.sendStatus(500);
         } else {
-            console.log(result[0].id)
-            user_id = result[0].id;
+
+            const sub_id = result[0].id;
 
             db.query('INSERT INTO threads (subject, user_id, sub_id) VALUES (?, ?, ?)',
             [subject, user_id, sub_id],
@@ -297,7 +297,8 @@ app.post('/api/threads', (req, res) => {
                 }
             });
         }
-    })
+
+    });
 });
 
 app.listen(3001, () => {
