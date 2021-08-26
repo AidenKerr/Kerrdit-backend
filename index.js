@@ -146,6 +146,7 @@ app.post('/api/posts', (req, res) => {
     });
 });
 
+// TODO remove this old upvote code
 app.post('/api/posts/upvote', (req, res) => {
     const post_id = req.body.post_id;
     
@@ -167,7 +168,10 @@ app.get('/api/users/karma', (req, res) => {
 
     const user_id = req.body.user_id;
 
-    db.query('SELECT SUM(points) AS karma FROM posts WHERE user_id=?', user_id,
+    db.query(`SELECT SUM(value) AS karma
+                FROM posts
+                    INNER JOIN votes ON posts.id=votes.post_id
+                WHERE posts.user_id=?`, user_id,
     (err, result) => {
         if (err) {
             res.sendStatus(500);
@@ -183,12 +187,14 @@ app.get('/api/u/:username/threads', (req, res) => {
     const username = req.params.username;
 
     db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
-                    username, subject, points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
+                    username, subject, COALESCE(SUM(value), 0) as points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
                 FROM users
                     INNER JOIN threads ON users.id=threads.user_id
                     INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
                     INNER JOIN posts ON threads.id=posts.thread_id
+                    LEFT JOIN votes ON posts.id=votes.post_id
                 WHERE username=? AND posts.parent_id=0
+                GROUP BY threads.id
                 ORDER BY posted_on`, username,
     (err, result) => {
         if (err) {
@@ -203,8 +209,10 @@ app.get('/api/u/:username/userinfo', (req, res) => {
 
     const username = req.params.username;
 
-    db.query(`SELECT UNIX_TIMESTAMP(account_age) * 1000 as unix_time_ms, SUM(points) as karma FROM users
-                INNER JOIN posts ON users.id=posts.user_id
+    db.query(`SELECT UNIX_TIMESTAMP(account_age) * 1000 as unix_time_ms, COALESCE(SUM(value), 0) as karma
+                FROM users
+                    INNER JOIN posts ON users.id=posts.user_id
+                    LEFT JOIN votes ON posts.id=votes.post_id
                 WHERE username=? `,
     username,
     (err, result) => {
@@ -222,12 +230,14 @@ app.get('/api/r/:subkerrdit/threads', (req, res) => {
     const subkerrdit = req.params.subkerrdit;
 
     db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
-                    username, subject, points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
-                FROM users
-                    INNER JOIN threads ON users.id=threads.user_id
+              username, subject, COALESCE(SUM(value), 0) as points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
+                FROM posts
+                    LEFT JOIN votes ON posts.id=votes.post_id
+                    INNER JOIN threads ON threads.id=posts.thread_id
                     INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
-                    INNER JOIN posts ON threads.id=posts.thread_id
+                    INNER JOIN users ON threads.user_id=users.id
                 WHERE subkerrdits.name=? AND posts.parent_id=0
+                GROUP BY threads.id
                 ORDER BY points DESC`, subkerrdit,
     (err, result) => {
         if (err) {
@@ -236,6 +246,7 @@ app.get('/api/r/:subkerrdit/threads', (req, res) => {
             res.status(200).json(result);
         }
     });
+
 });
 
 // this should return all data concerning a specific thread.
