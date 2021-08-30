@@ -183,30 +183,6 @@ app.get('/api/users/karma', (req, res) => {
     });
 });
 
-// get all posts from a given user
-app.get('/api/u/:username/threads', (req, res) => {
-
-    const username = req.params.username;
-
-    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
-                    username, subject, COALESCE(SUM(value), 0) as points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
-                FROM users
-                    INNER JOIN threads ON users.id=threads.user_id
-                    INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
-                    INNER JOIN posts ON threads.id=posts.thread_id
-                    LEFT JOIN votes ON posts.id=votes.post_id
-                WHERE username=? AND posts.parent_id=0
-                GROUP BY threads.id
-                ORDER BY posted_on`, username,
-    (err, result) => {
-        if (err) {
-            res.sendStatus(500);
-        } else {
-            res.status(200).json(result);
-        }
-    });
-});
-
 app.get('/api/u/:username/userinfo', (req, res) => {
 
     const username = req.params.username;
@@ -227,11 +203,35 @@ app.get('/api/u/:username/userinfo', (req, res) => {
     });
 });
 
+// get all posts from a given user
+app.get('/api/u/:username/threads', (req, res) => {
+
+    const username = req.params.username;
+
+    db.query(`SELECT posts.id as post_id, threads.id as thread_id, users.id AS user_id, subkerrdits.name AS subkerrdit,
+                    username, subject, COALESCE(SUM(value), 0) as points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
+                FROM users
+                    INNER JOIN threads ON users.id=threads.user_id
+                    INNER JOIN subkerrdits ON threads.sub_id=subkerrdits.id
+                    INNER JOIN posts ON threads.id=posts.thread_id
+                    LEFT JOIN votes ON posts.id=votes.post_id
+                WHERE username=? AND posts.parent_id=0
+                GROUP BY threads.id
+                ORDER BY posted_on`, username,
+    (err, result) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.status(200).json(result);
+        }
+    });
+});
+
 app.get('/api/r/:subkerrdit/threads', (req, res) => {
 
     const subkerrdit = req.params.subkerrdit;
 
-    db.query(`SELECT threads.id, users.id AS user_id, subkerrdits.name AS subkerrdit,
+    db.query(`SELECT posts.id as post_id, threads.id as thread_id, users.id AS user_id, subkerrdits.name AS subkerrdit,
               username, subject, COALESCE(SUM(value), 0) as points, UNIX_TIMESTAMP(posted_on) * 1000 as unix_time_ms
                 FROM posts
                     LEFT JOIN votes ON posts.id=votes.post_id
@@ -313,6 +313,22 @@ app.post('/api/threads', (req, res) => {
 
     });
 });
+
+app.get('/api/userVotes', (req, res) => {
+
+    const IDs = req.query['IDs'];
+    const user_id = req.query['user_id'];
+
+    db.query('SELECT post_id, value FROM votes WHERE post_id IN (?) and user_id=?', [IDs, user_id],
+    (err, result) => {
+        if (err) {
+            console.log(err)
+            res.sendStatus(500);
+        } else {
+            res.send(result);
+        }
+    })
+})
 
 app.listen(3001, () => {
     console.log("Server listening on port 3001");
