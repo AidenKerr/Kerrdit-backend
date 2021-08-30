@@ -146,12 +146,14 @@ app.post('/api/posts', (req, res) => {
     });
 });
 
-// TODO remove this old upvote code
-app.post('/api/posts/upvote', (req, res) => {
+
+app.post('/api/posts/vote', (req, res) => {
     const post_id = req.body.post_id;
+    const user_id = req.body.user_id;
+    const value = Math.sign(req.body.value); // votes can only be 1, -1, or 0
     
-    db.query('UPDATE posts SET points = points + 1 WHERE id = ?',
-    [post_id],
+    db.query('INSERT INTO votes (post_id, user_id, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value=?',
+    [post_id, user_id, value, value],
     (err, result) => {
         if (err) {
             res.sendStatus(500);
